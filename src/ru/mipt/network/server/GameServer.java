@@ -25,24 +25,30 @@ public class GameServer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (NumberFormatException e) {
-			e.printStackTrace();
+			e.printStackTrace();	//TODO show message, that entered number is illegal
 		} catch (SecurityException e) {
 			e.printStackTrace();	//TODO show message, such port cannot be used
 		}
 		
 	}
 	
-	public void startServer(String dataPath, int playersNumber, int port) {
+	public void startServer(int playersNumber) {
 		try {		
 			while (true) {	//always listen for new connections
 				Socket clientSocket = serverSocket.accept();
 				current_players += 1;
-				if (current_players == playersNumber) {
-					clientList.add(clientSocket);	//add new connection
+				if (current_players < playersNumber) {
+					clientSocketList.add(clientSocket);	//add new connection
+					Thread clientHandler = new ClientHandler(current_players-1, clientSocket, sync_object);
+					clientThreadList.add(clientHandler);
+					clientHandler.start();	//start thread
+					//TODO
+					//create thread
 				} else {
 					clientSocket.close();
-					startGameSession(clientList);
+					startGameSession(clientSocketList);
 					clearSession();
+					current_players = 0;
 				} 
 			}
 		} catch (IOException e) {
@@ -56,16 +62,19 @@ public class GameServer {
 	public void startGameSession(LinkedList<Socket> clientList) {
 		//TODO
 		//create GameState
-		GameState gameState = new GameState();
+		//Synchronization above client threads
+		GameState gameState = new GameState(clientList.size());
 	}
 	
 	private ServerSocket serverSocket = null;
 	private int current_players = 0;
+	private int initialCash = 200;	//starting money
+	private Object sync_object = new Object();
 	
-	GameState state = null;
 	HashMap<Integer, String> questionsMap = new HashMap<Integer, String>();	//quiestions
 	HashMap<Integer, Integer> answersMap = new HashMap<Integer, Integer>();	//answers
-	LinkedList<Socket> clientList = new LinkedList<Socket>();	//connetions to clients
+	LinkedList<Socket> clientSocketList = new LinkedList<Socket>();	//socket connetions to clients
+	LinkedList<Thread> clientThreadList = new LinkedList<Thread>(); //client threads 
 	//private methods
 	/**
 	 * parsing file with questions and answers, saving all results 
@@ -89,14 +98,12 @@ public class GameServer {
 		}
 	}
 	private void clearSession() {
-		for (Socket client : clientList) {
+		for (Socket client : clientSocketList) {
 			try {
 				client.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		//TODO
-		//delete addresses, prepare for new round
 	}
 }
