@@ -6,5 +6,7 @@ package ru.mipt.network.server;
  *
  */
 public class GameState {
+	//TODO
+	//score here
 
 }
