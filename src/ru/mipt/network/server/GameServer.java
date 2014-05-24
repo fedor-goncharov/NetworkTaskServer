@@ -5,6 +5,7 @@ import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -12,19 +13,38 @@ import java.util.LinkedList;
 /**
  * Game server, sends questions, counts score and
  * sends answers to everybody.
- * @author fedor
+ * @author fedor.goncharov.ol@gmail.com
  *
  */
 public class GameServer {
+	
+	public GameServer(String dataPath) {
+		
+	}
 
-	public GameServer(String dataPath, int port) {
-		this.port = port;
+	public GameServer(String dataPath, int playersNumber, int port) {
 		try {
 			parseDataFile(dataPath);
+			serverSocket = new ServerSocket(port);
+			while (true) {	//always listen for new connections
+				Socket clientSocket = serverSocket.accept();
+				if (current_players < playersNumber) {
+					clientList.add(clientSocket);	//add new connection
+					current_players += 1;
+				} else {
+					
+				}
+				clientSocket.close();	//close connection
+				//TODO create thread for 
+			}
 			//TODO
 			//create GameState class
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace();	//TODO handle such events
+		} catch (NumberFormatException e) {
+			e.printStackTrace();	//TODO handle such events			
+		} catch (SecurityException e) {
+			e.printStackTrace();	//TODO handle such events
 		}
 		//TODO
 		//create GameState class, write all info there
@@ -33,13 +53,13 @@ public class GameServer {
 	/**
 	 * Opens socket for connection to specified port, creates threads for clients 
 	 */
-	public void startServer() {
+	public void startGameSession() {
 		
 	}
 	
-	private int max_clients = 20;
-	private int current_clients = 0;
-	private int port = 6666;
+	private ServerSocket serverSocket = null;
+	private int playersNumber = 0;
+	private int current_players = 0;
 	
 	GameState state = null;
 	HashMap<Integer, String> questionsMap = new HashMap<Integer, String>();	//quiestions
@@ -50,7 +70,7 @@ public class GameServer {
 	/**
 	 * parsing file with questions and answers, saving all results 
 	 */
-	private void parseDataFile(String dataPath) throws IOException {
+	private void parseDataFile(String dataPath) throws IOException, NumberFormatException {
 		
 		BufferedReader buffReader = new BufferedReader(
 										new InputStreamReader(
@@ -65,8 +85,7 @@ public class GameServer {
 			Integer answer = Integer.valueOf(answerLine);
 			answersMap.put(questionNumber, answer);	//put answer
 			questionNumber += 1;
+		buffReader.close();	//close stream after parsing
 		}
-		//TODO
-		//implement parsing of the data file
 	}
 }
