@@ -80,7 +80,9 @@ public class GameServer {
 				sync_object.notifyAll();
 			}
 			//generate questions
+			sync_object.respawn();	//clear state before new round
 			gameState.round = gameState.round + 1;	//step
+			
 		}
 	}
 	

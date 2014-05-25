@@ -17,24 +17,31 @@ public class GameState {
 	public HashMap<Integer,Integer> score = new HashMap<Integer, Integer>();	//game score
 	private Set<Integer> unusedQuestionIDs = new HashSet<Integer>();
 	public int round = 0;
+	public int numberOfPlayers = 0;
 	
 	//session variables
 	public Set<Integer> answerSet = Collections.synchronizedSet(new HashSet<Integer>());
 	public HashMap<Integer, Integer> finalAnswerMap = new HashMap<Integer, Integer>();
 	
 	public GameState(int numberOfPlayers, int initial_cash) {
+		this.numberOfPlayers = numberOfPlayers;
 		for (int i = 0; i < numberOfPlayers; ++i) {
 			score.put(i, initial_cash);					//initial score - 0
 			unusedQuestionIDs.add(new Integer(i));		//initial set of unused questions
 		}
 	}
-	
 	/**
 	 * Atomically add first answer from the client
 	 * @param answer
+	 * @return boolean - true if the last thread called this function, false in other case
 	 */
-	public void addAnswerToSet(int answer) {
+	public boolean addAnswerToSet(int answer) {
 		answerSet.add(new Integer(answer));
+		if (answerSet.size() == numberOfPlayers) {
+			return true;
+		} else {
+			return false;
+		}
 	}
 	/**
 	 * Save client name to game state class.

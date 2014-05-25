@@ -9,6 +9,7 @@ public class SyncObject {
 	public boolean startGame = false;
 	public boolean newRound = false;
 	public boolean askQuestion = false;
+	public boolean allAnswered = false;
 	int question_id = 0;	//current question
 	/**
 	 * change game session to initial state
@@ -16,6 +17,7 @@ public class SyncObject {
 	public void respawn() {
 		newRound = false;
 		askQuestion = false;
+		allAnswered = false;
 		//TODO
 		//recreate boolean variables
 	}

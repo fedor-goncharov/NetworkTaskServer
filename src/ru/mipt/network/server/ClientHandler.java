@@ -62,18 +62,33 @@ public class ClientHandler extends Thread {
 			int question_id = sync_object.question_id;
 			outWriter.writeInt(question_id);
 			outWriter.writeUTF(gameServer.questionsMap.get(new Integer(question_id)));
-			gameState.addAnswerToSet(inReader.readInt()); //add first answer to set
+			synchronized (sync_object) {
+				if (gameState.addAnswerToSet(inReader.readInt())) { //add first answer to set
+					sync_object.allAnswered = true;					//check if the last thread called this method
+					notifyAll();
+				}
+				if (!sync_object.allAnswered) {
+					try {
+						this.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
 			//must synchronize here on all threads, that everybody has finished their answer
 			//block here
 			
+			//send arraylist of all answers
+			//get answer from all clients
+			gameState.finalAnswerMap.put(new Integer(id), new Integer(inReader.readInt()));
+			//after all finished - check results, send answers
 			// --> block all threads
 			//server summarizes all the results and gives an array
 			//threads unblocked, send all variants
 			//read answer
-			gameState.finalAnswerMap.put(new Integer(id), new Integer(inReader.readInt()));
 			//check unswers
 			//send score
-			//new game
+			//new round
 			synchronized (sync_object) {
 				if (!sync_object.newRound) {
 					try {
