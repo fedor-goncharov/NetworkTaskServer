@@ -10,14 +10,14 @@ public class ClientHandler extends Thread {
 	int cash;		//current player money
 	Socket client = null;
 	String name;	//client name
-	Object sync_object = null;	//thread synchronization Object
+	SyncObject sync_object = null;	//thread synchronization Object
 	DataInputStream inReader = null;	//data reader from the socket
 	DataOutputStream outWriter = null; 	//data writer to the socket
 	
 	private GameServer gameServer = null;	//reference to master class
 	private GameState  gameState = null;
 	
-	public ClientHandler(int id, Socket client, Object sync_object,
+	public ClientHandler(int id, Socket client, SyncObject sync_object,
 			GameServer gameServer,
 			GameState gameState,
 			int cash) {
@@ -37,32 +37,61 @@ public class ClientHandler extends Thread {
 			
 	@Override
 	public void run() {
-		
 		try {
 			//get name from client, give him initial cash -- sleep
 			name = inReader.readUTF();
 			outWriter.writeInt(cash);	//send it's initial cash
-			
+			synchronized (sync_object) {	//start game
+				if (!sync_object.startGame) {
+					try {
+						this.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			synchronized (sync_object) {	//generate question, all threads must wait until question being
+											//generated
+				if (!sync_object.askQuestion) {
+					try {
+						this.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
 			// --> block before generating questions
 			//TODO generate correct questions
 			int question_id = 0;
 			outWriter.writeInt(question_id);
 			outWriter.writeUTF(gameServer.questionsMap.get(new Integer(question_id)));
-			int firstAnswer = inReader.readInt();
+			gameState.answerSet.add(new Integer(inReader.readInt()));	//add first answer to set
+			//must synchronize here on all threads
 			//notify server that you read the answer
 			// --> block all threads
 			//server summarizes all the results and gives an array
 			//threads unblocked, send all variants
 			//read answer
+			gameState.finalAnswerMap.put(new Integer(id), new Integer(inReader.readInt()));
+			//check unwers
 			//send score
 			//new game
+			synchronized (sync_object) {
+				if (!sync_object.newRound) {
+					try {
+						sync_object.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
 	/**
-	 * After setter, invoked when game starts
+	 * setter, invoked when game starts
 	 * @param gameState
 	 */
 	public void setGameState(GameState gameState) {

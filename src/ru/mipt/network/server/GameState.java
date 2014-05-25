@@ -13,8 +13,12 @@ import java.util.Set;
 public class GameState {
 	
 	public HashMap<Integer,Integer> score = new HashMap<Integer, Integer>();	//game score
-	public Set<Integer> answerSet = Collections.synchronizedSet(new HashSet<Integer>());
 	private Set<Integer> unusedQuestionIDs = new HashSet<Integer>();
+	public int round = 0;
+	
+	//session variables
+	public Set<Integer> answerSet = Collections.synchronizedSet(new HashSet<Integer>());
+	public HashMap<Integer, Integer> finalAnswerMap = new HashMap<Integer, Integer>();
 	
 	public GameState(int numberOfPlayers, int initial_cash) {
 		for (int i = 0; i < numberOfPlayers; ++i) {
@@ -32,8 +36,10 @@ public class GameState {
 		int item = new Random().nextInt(size);
 		int i = 0;
 		for (Integer questionID : unusedQuestionIDs) {
-			if (i == item)
+			if (i == item) {
+				unusedQuestionIDs.remove(questionID);
 				return questionID;
+			}
 			i = i + 1;
 		}
 		

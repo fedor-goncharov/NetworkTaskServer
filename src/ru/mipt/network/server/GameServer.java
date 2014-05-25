@@ -7,11 +7,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Set;
 
 /**
  * Game server, sends questions, counts score and
@@ -50,11 +47,11 @@ public class GameServer {
 							null,						//initial state is undefined
 							initial_cash
 					);
-					clientThreadList.add(clientHandler);
+					clientHandlerList.add(clientHandler);
 					clientHandler.start();				//start thread
 				} else {
 					clientSocket.close();
-					startGameSession(clientThreadList);
+					startGameSession();
 					clearSession();
 					current_players = 0;
 				}
@@ -67,28 +64,34 @@ public class GameServer {
 	/**
 	 * Opens socket for connection to specified port, creates threads for clients 
 	 */
-	public void startGameSession(LinkedList<ClientHandler> clientList) {
-		GameState gameState = new GameState(clientList.size());
-		for (ClientHandler client : clientList) {
+	private void startGameSession() {
+		GameState gameState = new GameState(current_players, initial_cash);
+		for (ClientHandler client : clientHandlerList) {
 			client.setGameState(gameState);
 		}
-		
-		
+		while (gameState.round < default_rounds) {
+			synchronized (sync_object) {	//game started
+				sync_object.startGame = true;
+				sync_object.notifyAll();
+			}
+			//generate questions
+			gameState.round = gameState.round + 1;	//step
+		}
 	}
 	
 	private ServerSocket serverSocket = null;
 	private int current_players = 0;
-	private int initial_cash = 200;	//starting money
-	//TODO
-	//sync object must be very special
-	private Object sync_object = new Object();
+	private int initial_cash = 200;
+	private int default_rounds = 30;
+	
+	//synchronization object, to control client threads
+	private SyncObject sync_object = new SyncObject();	
 	
 	HashMap<Integer, String> questionsMap = new HashMap<Integer, String>();	//all quiestions 
 	HashMap<Integer, Integer> answersMap = new HashMap<Integer, Integer>();	//all answers
 	LinkedList<Socket> clientSocketList = new LinkedList<Socket>();	//socket connetions to clients
-	LinkedList<ClientHandler> clientThreadList = new LinkedList<ClientHandler>(); //client threads
-	Set<Integer> answerSet = Collections.synchronizedSet(new HashSet<Integer>());	//thread-protected set,
-																					//for client-answers
+	LinkedList<ClientHandler> clientHandlerList = new LinkedList<ClientHandler>(); //client threads
+
 	//private methods
 	/**
 	 * parsing file with questions and answers, saving all results 
@@ -118,7 +121,6 @@ public class GameServer {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			answerSet.clear();
 		}
 	}
 }
