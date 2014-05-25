@@ -74,6 +74,11 @@ public class GameServer {
 				sync_object.startGame = true;
 				sync_object.notifyAll();
 			}
+			synchronized (sync_object) {
+				sync_object.question_id = gameState.generateQuestionID();
+				sync_object.askQuestion = true;
+				sync_object.notifyAll();
+			}
 			//generate questions
 			gameState.round = gameState.round + 1;	//step
 		}

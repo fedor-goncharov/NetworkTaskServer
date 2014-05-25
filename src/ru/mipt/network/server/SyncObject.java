@@ -9,6 +9,7 @@ public class SyncObject {
 	public boolean startGame = false;
 	public boolean newRound = false;
 	public boolean askQuestion = false;
+	int question_id = 0;	//current question
 	/**
 	 * change game session to initial state
 	 */

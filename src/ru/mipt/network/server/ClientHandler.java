@@ -38,8 +38,7 @@ public class ClientHandler extends Thread {
 	@Override
 	public void run() {
 		try {
-			//get name from client, give him initial cash -- sleep
-			name = inReader.readUTF();
+			gameState.addClientName(id, inReader.readUTF());
 			outWriter.writeInt(cash);	//send it's initial cash
 			synchronized (sync_object) {	//start game
 				if (!sync_object.startGame) {
@@ -60,20 +59,19 @@ public class ClientHandler extends Thread {
 					}
 				}
 			}
-			// --> block before generating questions
-			//TODO generate correct questions
-			int question_id = 0;
+			int question_id = sync_object.question_id;
 			outWriter.writeInt(question_id);
 			outWriter.writeUTF(gameServer.questionsMap.get(new Integer(question_id)));
-			gameState.answerSet.add(new Integer(inReader.readInt()));	//add first answer to set
-			//must synchronize here on all threads
-			//notify server that you read the answer
+			gameState.addAnswerToSet(inReader.readInt()); //add first answer to set
+			//must synchronize here on all threads, that everybody has finished their answer
+			//block here
+			
 			// --> block all threads
 			//server summarizes all the results and gives an array
 			//threads unblocked, send all variants
 			//read answer
 			gameState.finalAnswerMap.put(new Integer(id), new Integer(inReader.readInt()));
-			//check unwers
+			//check unswers
 			//send score
 			//new game
 			synchronized (sync_object) {
