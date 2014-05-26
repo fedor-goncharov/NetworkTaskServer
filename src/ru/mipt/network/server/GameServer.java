@@ -24,10 +24,13 @@ public class GameServer {
 			serverSocket = new ServerSocket(port);
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.out.println("IOError occured, server stopped. Check datapath and port");
 		} catch (NumberFormatException e) {
-			e.printStackTrace();	//TODO show message, that entered number is illegal
+			e.printStackTrace();
+			System.out.println("Format Error occured, server stopped. Bad format for port number");
 		} catch (SecurityException e) {
-			e.printStackTrace();	//TODO show message, such port cannot be used
+			e.printStackTrace();
+			System.out.println("Security Error occured, no permissions to open file, or start server on such port");
 		}
 		
 	}
@@ -69,7 +72,6 @@ public class GameServer {
 						cleanSession();
 						continue;
 					}
-					System.out.println("Session cleaned");
 					cleanSession();
 					gameState.cleanState();
 					gameState.round = 1;
@@ -90,7 +92,7 @@ public class GameServer {
 			synchronized (sync_object) {	//game started
 				sync_object.startGame = true;
 				sync_object.notifyAll();
-				System.out.println("-----Unblocked startGame-----");
+				System.out.println("server:-----Unblocked startGame-----");
 			}
 			sync_object.question_id = gameState.generateQuestionID();
 			sync_object.correct_answer = answersMap.get(sync_object.question_id);
@@ -98,7 +100,7 @@ public class GameServer {
 			synchronized (sync_object) {	//all clients wait for the question
 				sync_object.askQuestion = true;
 				sync_object.notifyAll();
-				System.out.println("----Unblocked askQuestion-----");
+				System.out.println("server:----Unblocked askQuestion-----");
 			}
 			synchronized (sync_object) {
 				if (!sync_object.namesWritten) {
@@ -131,7 +133,7 @@ public class GameServer {
 			synchronized (sync_object) {
 				sync_object.scoreCheckedUpdated = true;
 				sync_object.notifyAll();
-				System.out.println("----Unblocked scoreCheckedUpdated----");
+				System.out.println("server:----Unblocked scoreCheckedUpdated----");
 			}
 			synchronized (sync_object) {
 				if (!sync_object.newRound) {
@@ -145,20 +147,18 @@ public class GameServer {
 			gameState.cleanState();
 			synchronized (sync_object) {
 				gameState.round = gameState.round + 1;	//step
-				System.out.println("GameState Round:" + gameState.round);
 				sync_object.clean();
 				sync_object.updateRound = true;
 				sync_object.notifyAll();
-				System.out.println("----Unblocked updateRound----");
+				System.out.println("server:----Unblocked updateRound----");
 			}
 		}
-		System.out.println("Main exited");
 	}
 	
 	private ServerSocket serverSocket = null;
 	private int current_players = 0;
 	private int initial_cash = 10;
-	public int default_rounds = 15;
+	public int default_rounds = 10;
 	private int numberOfQuestions = 40;
 	
 	//synchronization object, to control client threads

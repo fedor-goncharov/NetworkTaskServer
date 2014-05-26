@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 
 public class ClientHandler extends Thread {
@@ -46,14 +45,14 @@ public void run() {
 	try {
 		int rubbish = inReader.readInt(); //rubbish when first read from socket
 		name = inReader.readUTF();
-		System.out.println("ClientName:" + name);	//someone connected
+		System.out.println("Client name:" + name);	//someone connected
 		while (gameState.round < gameServer.default_rounds + 1) {
 			
-			System.out.println("Round:" + gameState.round);
+			System.out.println(name + " : Round:" + gameState.round);
 			synchronized (sync_object) {	//start game
 				if (!sync_object.startGame) {
 					try {
-						System.out.println("Client "+ id +" Blocked at startGame");
+						System.out.println(name + ": Client "+ id +" Blocked at startGame");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -65,7 +64,7 @@ public void run() {
 											//generated
 				if (!sync_object.askQuestion) {
 					try {
-						System.out.println("Client " + id + " Blocked at askQuestion");
+						System.out.println(name + ": Client " + id + " Blocked at askQuestion");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -94,7 +93,6 @@ public void run() {
 			}
 			
 			Integer answer = new Integer(inReader.readInt());
-			
 			synchronized (sync_object) {
 				gameState.answerArray.add(answer);
 				if (gameState.answerArray.size() == gameState.numberOfPlayers) { //add first answer to set
@@ -103,7 +101,7 @@ public void run() {
 					sync_object.notifyAll();
 				} else {
 					try {
-						System.out.println("Client " + id + " Blocked at allAnswered");
+						System.out.println(name + ": Client " + id + " Blocked at allAnswered");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -114,8 +112,8 @@ public void run() {
 			Integer finalAnswer = new Integer(inReader.readInt());
 			Integer bet = new Integer(inReader.readInt());			
 			
-			System.out.println("Client " + id + " Final Answer:" + finalAnswer);
-			System.out.println("Client " + id + " Bet:" + bet);
+			System.out.println(name + ": Client " + id + " Final Answer:" + finalAnswer);
+			System.out.println(name + ": Client " + id + " Bet:" + bet);
 			//wait for everyone to send their results
 			synchronized (sync_object) {
 				gameState.finalAnswerMap.put(new Integer(id), finalAnswer);
@@ -125,7 +123,7 @@ public void run() {
 					sync_object.notifyAll();
 				} else {
 					try {
-						System.out.println("Client " + id + " Blocked at finalAnswer");
+						System.out.println(name + ": Client " + id + " Blocked at finalAnswer");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -136,7 +134,7 @@ public void run() {
 			synchronized (sync_object) {
 				if (!sync_object.scoreCheckedUpdated) {
 					try {
-						System.out.println("Client " + id + " Blocked at scoreCheckUpdated");
+						System.out.println(name + ": Client " + id + " Blocked at scoreCheckUpdated");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -154,18 +152,18 @@ public void run() {
 					sync_object.notifyAll();
 				} else {
 					try {
-						System.out.println("Client " + id + " Blocked at newRound");
+						System.out.println(name +": Client " + id + " Blocked at newRound");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 				}
 			}
-			System.out.println("Round " + gameState.round + " finished." );
+			System.out.println(name + ": Round " + gameState.round + " finished." );
 			synchronized (sync_object) {
 				if (!sync_object.updateRound) {
 					try {
-						System.out.println("Client " + id + " Blocked at updateRound");
+						System.out.println(name + ": Client " + id + " Blocked at updateRound");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
@@ -173,7 +171,7 @@ public void run() {
 				} 
 			}
 		}
-	} catch (IOException e) {
+	} catch (Exception e) {
 		e.printStackTrace();
 	}
 }

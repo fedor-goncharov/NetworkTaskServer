@@ -66,7 +66,7 @@ public class GameState {
 		for (Integer client_id : finalAnswerMap.keySet()) {
 			if ((correct_answer - finalAnswerMap.get(client_id)) < 0) {	//answer is totally(Jeka) wrong
 				System.out.println("Final answer:" + finalAnswerMap.get(client_id));
-				int new_score = ((score.get(client_id) - bets.get(client_id)) < 0 ? 1 : 
+				int new_score = ((score.get(client_id) - bets.get(client_id)) <= 0 ? 1 : 
 					score.get(client_id) - bets.get(client_id));
 				System.out.println(new_score);
 				
@@ -88,7 +88,7 @@ public class GameState {
 				score.put(client_id, score.get(client_id) + bets.get(client_id));
 				winners.put(client_id, true);
 			} else {
-				int new_score = (score.get(client_id) - bets.get(client_id) < 0 ? 1 : 
+				int new_score = (score.get(client_id) - bets.get(client_id) <= 0 ? 1 : 
 					score.get(client_id) - bets.get(client_id));
 				score.put(client_id, new Integer(new_score));
 				winners.put(client_id, false);
