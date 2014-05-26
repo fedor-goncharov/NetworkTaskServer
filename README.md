@@ -2,7 +2,7 @@ NetworkTaskServer
 =================
 Network Task Server
 
-Java server for Wits & Wagers. Written on Java 1.7.
+Java server for Wits & Wagers. Written on Java 1.7. Requires Java 1.7
 
 Launch project:
 
