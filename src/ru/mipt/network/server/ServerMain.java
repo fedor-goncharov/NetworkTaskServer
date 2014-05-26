@@ -7,7 +7,10 @@ public class ServerMain {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+			String dataPath = "/home/fedor/Programming/workspace/NetworkTask/questions.txt";
+			
+			GameServer gameServer = new GameServer(dataPath, 7777);
+			gameServer.startServer(2);
 
 	}
 

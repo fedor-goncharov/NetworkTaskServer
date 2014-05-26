@@ -2,7 +2,11 @@ package ru.mipt.network.server;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 
 public class ClientHandler extends Thread {
 
@@ -13,6 +17,7 @@ public class ClientHandler extends Thread {
 	SyncObject sync_object = null;	//thread synchronization Object
 	DataInputStream inReader = null;	//data reader from the socket
 	DataOutputStream outWriter = null; 	//data writer to the socket
+	ObjectOutputStream objWriter = null; //object writer to the socket
 	
 	private GameServer gameServer = null;	//reference to master class
 	private GameState  gameState = null;
@@ -30,30 +35,38 @@ public class ClientHandler extends Thread {
 		try {
 			inReader = new DataInputStream(client.getInputStream());
 			outWriter = new DataOutputStream(client.getOutputStream());
+			objWriter = new ObjectOutputStream(client.getOutputStream());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 			
-	@Override
-	public void run() {
-		try {
-			gameState.addClientName(id, inReader.readUTF());
-			outWriter.writeInt(cash);	//send it's initial cash
+@Override
+public void run() {
+	try {
+		int rubbish = inReader.readInt(); //rubbish when first read from socket
+		name = inReader.readUTF();
+		System.out.println("ClientName:" + name);	//someone connected
+		while (gameState.round < gameServer.default_rounds + 1) {
+			
+			System.out.println("Round:" + gameState.round);
 			synchronized (sync_object) {	//start game
 				if (!sync_object.startGame) {
 					try {
-						this.wait();
+						System.out.println("Client "+ id +" Blocked at startGame");
+						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 				}
 			}
+			
 			synchronized (sync_object) {	//generate question, all threads must wait until question being
 											//generated
 				if (!sync_object.askQuestion) {
 					try {
-						this.wait();
+						System.out.println("Client " + id + " Blocked at askQuestion");
+						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -62,47 +75,108 @@ public class ClientHandler extends Thread {
 			int question_id = sync_object.question_id;
 			outWriter.writeInt(question_id);
 			outWriter.writeUTF(gameServer.questionsMap.get(new Integer(question_id)));
-			synchronized (sync_object) {
-				if (gameState.addAnswerToSet(inReader.readInt())) { //add first answer to set
-					sync_object.allAnswered = true;					//check if the last thread called this method
-					notifyAll();
-				}
-				if (!sync_object.allAnswered) {
-					try {
-						this.wait();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
+			if (gameState.round == 1) {
+				synchronized (sync_object) {	//atomically add all names to the names array
+					gameState.names.put(new Integer(id), name);
+					if (gameState.names.size() == gameState.numberOfPlayers) {
+						sync_object.namesWritten = true;
+						sync_object.notifyAll();
+					} else {
+						try {
+							sync_object.wait();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 					}
 				}
+				outWriter.writeInt(cash);	//send it's initial cash
+				objWriter.writeObject(new ArrayList<String>(gameState.names.values()));
 			}
-			//must synchronize here on all threads, that everybody has finished their answer
-			//block here
 			
-			//send arraylist of all answers
-			//get answer from all clients
-			gameState.finalAnswerMap.put(new Integer(id), new Integer(inReader.readInt()));
-			//after all finished - check results, send answers
-			// --> block all threads
-			//server summarizes all the results and gives an array
-			//threads unblocked, send all variants
-			//read answer
-			//check unswers
-			//send score
-			//new round
+			Integer answer = new Integer(inReader.readInt());
+			
 			synchronized (sync_object) {
-				if (!sync_object.newRound) {
+				gameState.answerArray.add(answer);
+				if (gameState.answerArray.size() == gameState.numberOfPlayers) { //add first answer to set
+					gameState.answerSet = new HashSet<Integer>(gameState.answerArray);
+					sync_object.allAnswered = true;								//check if the last thread called this method
+					sync_object.notifyAll();
+				} else {
 					try {
+						System.out.println("Client " + id + " Blocked at allAnswered");
 						sync_object.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
+			objWriter.writeObject(new ArrayList<Integer>(gameState.answerSet));	//send all answers to the client
+			Integer finalAnswer = new Integer(inReader.readInt());
+			Integer bet = new Integer(inReader.readInt());			
+			
+			System.out.println("Client " + id + " Final Answer:" + finalAnswer);
+			System.out.println("Client " + id + " Bet:" + bet);
+			//wait for everyone to send their results
+			synchronized (sync_object) {
+				gameState.finalAnswerMap.put(new Integer(id), finalAnswer);
+				gameState.bets.put(new Integer(id), bet);
+				if (gameState.finalAnswerMap.size() == gameState.numberOfPlayers) {
+					sync_object.allFinallyAnswered = true;
+					sync_object.notifyAll();
+				} else {
+					try {
+						System.out.println("Client " + id + " Blocked at finalAnswer");
+						sync_object.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			//count round
+			synchronized (sync_object) {
+				if (!sync_object.scoreCheckedUpdated) {
+					try {
+						System.out.println("Client " + id + " Blocked at scoreCheckUpdated");
+						sync_object.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			outWriter.writeBoolean((gameState.winners.get(new Integer(id)) == true ? true : false));
+			objWriter.writeObject(new ArrayList<Integer>(gameState.score.values()));
+			outWriter.writeInt(sync_object.correct_answer);
+			synchronized (sync_object) {
+				sync_object.sent = sync_object.sent + 1;
+				if (sync_object.sent == gameState.numberOfPlayers) {
+					sync_object.newRound = true;
+					sync_object.updateRound = false;	//strange command, but required for sync
+					sync_object.notifyAll();
+				} else {
+					try {
+						System.out.println("Client " + id + " Blocked at newRound");
+						sync_object.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+			System.out.println("Round " + gameState.round + " finished." );
+			synchronized (sync_object) {
+				if (!sync_object.updateRound) {
+					try {
+						System.out.println("Client " + id + " Blocked at updateRound");
+						sync_object.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				} 
+			}
 		}
+	} catch (IOException e) {
+		e.printStackTrace();
 	}
-	
+}
 	/**
 	 * setter, invoked when game starts
 	 * @param gameState
